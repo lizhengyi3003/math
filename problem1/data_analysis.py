@@ -185,16 +185,16 @@ for target in ["孕周数值", "孕妇BMI"]:
 # 散点图 + LOESS 平滑
 fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
 for ax, (xc, yc, title) in zip(axes, [
-    ("孕周数值", "Y染色体浓度", "Y染色体浓度 vs 孕周数值"),
-    ("孕妇BMI", "Y染色体浓度", "Y染色体浓度 vs BMI"),
-    ("孕周数值", "孕妇BMI", "孕周数值 vs BMI"),
+    ("孕周数值", "Y染色体浓度", "Y染色体浓度与孕周数值"),
+    ("孕妇BMI", "Y染色体浓度", "Y染色体浓度与BMI"),
+    ("孕周数值", "孕妇BMI", "孕周数值与BMI"),
 ]):
     d = df[[xc, yc]].dropna()
     x, y = d[xc].values, d[yc].values
     ax.scatter(x, y, alpha=0.4, s=25, color="#4C72B0")
     try:
         s = lowess(y, x, frac=0.3, return_sorted=True)
-        ax.plot(s[:, 0], s[:, 1], color="red", lw=2.5, label="LOESS趋势")
+        ax.plot(s[:, 0], s[:, 1], color="red", lw=2.5, label="LOESS 平滑趋势")
     except:
         pass
     r, p = pearsonr(x, y)
@@ -220,7 +220,7 @@ for subj in sample:
     d = df[df["孕妇代码"] == subj].sort_values("孕周数值")
     axes[0].plot(d["孕周数值"], d["Y染色体浓度"], alpha=0.3, lw=0.8, color="gray")
 sm_lo = lowess(df["Y染色体浓度"], df["孕周数值"], frac=0.3, return_sorted=True)
-axes[0].plot(sm_lo[:, 0], sm_lo[:, 1], color="red", lw=3, label="LOESS趋势")
+axes[0].plot(sm_lo[:, 0], sm_lo[:, 1], color="red", lw=3, label="LOESS 平滑趋势")
 axes[0].set_title("个体轨迹（Y染色体浓度 随孕周变化）", fontsize=13)
 axes[0].set_xlabel("孕周（周）"); axes[0].set_ylabel("Y染色体浓度")
 axes[0].legend()
@@ -327,10 +327,11 @@ fitted = best.fittedvalues; resid = best.resid
 axes[0].scatter(fitted, resid, alpha=0.5, s=20, color="#4C72B0")
 axes[0].axhline(0, color="red", ls="--")
 axes[0].set_xlabel("拟合值"); axes[0].set_ylabel("残差")
-axes[0].set_title("残差 vs 拟合值")
+axes[0].set_title("残差与拟合值")
 sm.qqplot(resid, stats.norm, fit=True, line="45", ax=axes[1],
           markerfacecolor="#4C72B0", markersize=4)
 axes[1].set_title("残差 Q-Q 图")
+axes[1].set_xlabel("理论分位数"); axes[1].set_ylabel("样本分位数")
 axes[2].hist(resid, bins=30, color="#55A868", edgecolor="white", alpha=0.8, density=True)
 xr = np.linspace(resid.min(), resid.max(), 200)
 axes[2].plot(xr, stats.norm.pdf(xr, resid.mean(), resid.std()), color="red", lw=2)
@@ -343,6 +344,7 @@ re_vals = np.array(list(best.random_effects.values()))
 sm.qqplot(re_vals, stats.norm, fit=True, line="45", ax=ax,
           markerfacecolor="#55A868", markersize=6)
 ax.set_title("随机截距 Q-Q 图", fontsize=14)
+ax.set_xlabel("理论分位数"); ax.set_ylabel("样本分位数")
 save_fig("model_qq_random_effects.png")
 
 # ================================================================
@@ -364,7 +366,7 @@ tee_print(f"  Mann-Whitney U = {u_stat:.1f}, p = {u_p:.4f}")
 fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
 sns.violinplot(data=df, x="胎儿是否健康", y="Y染色体浓度",
                palette={"是": "#55A868", "否": "#C44E52"}, inner="quartile", ax=axes[0])
-axes[0].set_title(f"Y染色体浓度 按健康状态分组\nMann-Whitney p={u_p:.4f}", fontsize=13)
+axes[0].set_title(f"Y染色体浓度 按健康状态分组\nMann-Whitney U 检验 p={u_p:.4f}", fontsize=13)
 sns.boxplot(data=df, x="IVF妊娠", y="Y染色体浓度", hue="胎儿是否健康",
             palette={"是": "#55A868", "否": "#C44E52"}, ax=axes[1])
 axes[1].set_title("Y染色体浓度 按 IVF×健康 分组", fontsize=13)
@@ -379,8 +381,9 @@ tee_print("阶段6：非线性检验")
 
 d_q = df[["Y染色体浓度", "孕周数值", "孕妇代码"]].dropna()
 d_q["孕周2"] = d_q["孕周数值"] ** 2
-m_lin = smf.mixedlm("Y染色体浓度 ~ 孕周数值", d_q, groups=d_q["孕妇代码"]).fit(reml=True)
-m_quad = smf.mixedlm("Y染色体浓度 ~ 孕周数值 + 孕周2", d_q, groups=d_q["孕妇代码"]).fit(reml=True)
+# 注意：LRT 比较不同固定效应结构时，必须用 ML（reml=False），不能用 REML
+m_lin = smf.mixedlm("Y染色体浓度 ~ 孕周数值", d_q, groups=d_q["孕妇代码"]).fit(reml=False)
+m_quad = smf.mixedlm("Y染色体浓度 ~ 孕周数值 + 孕周2", d_q, groups=d_q["孕妇代码"]).fit(reml=False)
 lrt_q = -2 * (m_lin.llf - m_quad.llf)
 p_q = stats.chi2.sf(lrt_q, 1)
 tee_print(f"二次项 LRT: χ²={lrt_q:.2f}, p={p_q:.4f}")
@@ -392,7 +395,7 @@ b0, b1 = m_lin.fe_params[["Intercept", "孕周数值"]]
 axes[0].plot(xs, b0 + b1 * xs, color="green", lw=2.5, label="线性拟合")
 b0q, b1q, b2q = m_quad.fe_params[["Intercept", "孕周数值", "孕周2"]]
 axes[0].plot(xs, b0q + b1q * xs + b2q * xs**2, color="red", ls="--", lw=2.5, label="二次拟合")
-axes[0].set_title(f"线性 vs 二次拟合（LRT p={p_q:.4f}）", fontsize=13)
+axes[0].set_title(f"线性与二次拟合（似然比检验 p={p_q:.4f}）", fontsize=13)
 axes[0].legend(); axes[0].set_xlabel("孕周（周）"); axes[0].set_ylabel("Y染色体浓度")
 
 sns.boxplot(data=df, x="检测抽血次数", y="Y染色体浓度", palette="Set3", ax=axes[1])

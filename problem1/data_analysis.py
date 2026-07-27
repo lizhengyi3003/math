@@ -262,6 +262,7 @@ tee_print("\n  M1：+ 孕周 + BMI")
 r1 = smf.mixedlm("Y染色体浓度 ~ 孕周数值_z + 孕妇BMI_z", df_m, groups=df_m["孕妇代码"]).fit(reml=True)
 models["M1"] = "+Week+BMI"; results["M1"] = r1
 tee_print(r1.summary().tables[1])
+tee_print(f"    残差方差 (scale) = {r1.scale:.6f}, 残差标准差 = {np.sqrt(r1.scale):.6f}")
 
 tee_print("\n  M2：+ 年龄 + IVF")
 r2 = smf.mixedlm("Y染色体浓度 ~ 孕周数值_z + 孕妇BMI_z + 年龄_z + IVF_试管 + IVF_人授",

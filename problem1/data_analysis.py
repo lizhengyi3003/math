@@ -1,8 +1,5 @@
 ﻿"""
-data_modeling.xlsx Statistical Analysis
-=========================================
-Y chromosome concentration vs Gestational Week & BMI
-LMM modeling, significance testing, charts -> result/
+data_modeling.xlsx 统计分析
 """
 import pandas as pd
 import numpy as np
@@ -19,59 +16,75 @@ import warnings
 import os
 warnings.filterwarnings("ignore")
 
-# ── Step 1: seaborn style (does NOT touch fonts) ──
+# ================================================================
+# 输出目录与日志文件
+# ================================================================
+INPUT_FILE = r"../data_modeling.xlsx"
+RESULT_DIR = r"result"
+os.makedirs(RESULT_DIR, exist_ok=True)
+
+_OUTPUT_MD = os.path.join(RESULT_DIR, "analysis_output.md")
+_log_file = open(_OUTPUT_MD, "w", encoding="utf-8")
+_log_file.write("# data_analysis.py 完整终端输出\n\n```\n")
+
+def tee_print(*args, **kwargs):
+    """同时输出到终端和 md 日志文件"""
+    import builtins
+    builtins.print(*args, **kwargs)
+    builtins.print(*args, file=_log_file, **kwargs)
+
+# ── 步骤1：seaborn 样式（不触碰字体）──
 sns.set_style("whitegrid")
 sns.set_palette("Set2")
 
-# ── Step 2: Chinese font (must be AFTER seaborn to prevent override) ──
+# ── 步骤2：中文字体（必须在 seaborn 之后设置，防止被覆盖）──
 import matplotlib.font_manager as fm
 
-_FONT_PATH = r"e:\Project\math\qiaoqiaoxihuanni.ttf"  # absolute path
+_FONT_PATH = os.path.join(os.path.dirname(__file__), "..", "qiaoqiaoxihuanni.ttf")  # 字体相对路径
 if os.path.exists(_FONT_PATH):
     fm.fontManager.addfont(_FONT_PATH)
     _font_name = fm.FontProperties(fname=_FONT_PATH).get_name()
     plt.rcParams["font.family"] = _font_name
     plt.rcParams["font.sans-serif"] = [_font_name, "DejaVu Sans"]
     plt.rcParams["font.serif"] = [_font_name]
-    print(f"Font: {_font_name}")
+    tee_print(f"Font: {_font_name}")
 else:
-    print(f"WARNING: Font not found at {_FONT_PATH}")
+    tee_print(f"WARNING: Font not found at {_FONT_PATH}")
 
 plt.rcParams["axes.unicode_minus"] = False
-
-INPUT_FILE = r"../data_modeling.xlsx"
-RESULT_DIR = r"result"
-os.makedirs(RESULT_DIR, exist_ok=True)
 
 def save_fig(name):
     path = os.path.join(RESULT_DIR, name)
     plt.tight_layout()
     plt.savefig(path, dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"  OK {name}")
+    tee_print(f"  OK {name}")
 
 
 # ================================================================
-# Load data
+# 加载数据
 # ================================================================
-print("=" * 60)
-print("Loading data_modeling.xlsx ...")
+tee_print("=" * 60)
+tee_print("正在加载 data_modeling.xlsx ...")
 df = pd.read_excel(INPUT_FILE)
-print(f"  Rows: {len(df)}, Cols: {len(df.columns)}, Subjects: {df['孕妇代码'].nunique()}")
-print(f"  Healthy/Unhealthy: {dict(df['胎儿是否健康'].value_counts())}")
+n_rows = len(df)
+n_subjects = df['孕妇代码'].nunique()
+tee_print(f"  行数: {n_rows}, 列数: {len(df.columns)}, 受试者数: {n_subjects}")
+tee_print(f"  人均测量次数: {n_rows / n_subjects:.1f} 次")
+tee_print(f"  健康/不健康: {dict(df['胎儿是否健康'].value_counts())}")
 
 # ================================================================
-# Phase 1: EDA
+# 阶段1：探索性数据分析（EDA）
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 1: EDA")
+tee_print("\n" + "=" * 60)
+tee_print("阶段1：探索性数据分析")
 
 for col in ["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄"]:
     s = df[col].dropna()
-    print(f"  {col}: mean={s.mean():.4f}, std={s.std():.4f}, "
-          f"min={s.min():.4f}, max={s.max():.4f}, skew={s.skew():.2f}")
+    tee_print(f"  {col}: 均值={s.mean():.4f}, 标准差={s.std():.4f}, "
+          f"最小值={s.min():.4f}, 最大值={s.max():.4f}, 偏度={s.skew():.2f}")
 
-# 4-in-1 distribution
+# 四合一分布图
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 for ax, (col, title, color) in zip(axes.flat, [
     ("Y染色体浓度", "Y染色体浓度分布", "#4C72B0"),
@@ -90,7 +103,7 @@ for ax, (col, title, color) in zip(axes.flat, [
     ax.legend(fontsize=8)
 save_fig("hist_distributions.png")
 
-# Boxplots
+# 箱线图
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 sns.boxplot(data=df, x="IVF妊娠", y="Y染色体浓度", palette="Set2", ax=axes[0])
 axes[0].set_title("Y染色体浓度 按 IVF妊娠 分组", fontsize=13)
@@ -99,10 +112,10 @@ axes[1].set_title("Y染色体浓度 按 胎儿是否健康 分组", fontsize=13)
 save_fig("boxplot_by_group.png")
 
 # ================================================================
-# Phase 2: Correlation
+# 阶段2：相关性分析
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 2: Correlation Analysis")
+tee_print("\n" + "=" * 60)
+tee_print("阶段2：相关性分析")
 
 corr_vars = ["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄", "X染色体浓度", "GC含量"]
 corr_data = df[corr_vars].dropna()
@@ -122,7 +135,7 @@ for i, vi in enumerate(corr_vars):
             spearman_mat[i, j] = spearman_mat[j, i] = r_s
             spearman_p[i, j] = spearman_p[j, i] = p_s
 
-# Heatmap (Pearson + Spearman)
+# 热力图（Pearson + Spearman）
 fig, axes = plt.subplots(1, 2, figsize=(18, 7))
 for ax, mat, pmat, title in [
     (axes[0], pearson_mat, pearson_p, "Pearson 相关系数"),
@@ -143,17 +156,17 @@ for ax, mat, pmat, title in [
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=9)
 save_fig("corr_heatmap.png")
 
-print("\nCorrelations with Y染色体浓度:")
+tee_print("\nY染色体浓度 与其他变量的相关性:")
 for v in corr_vars:
     if v != "Y染色体浓度":
         r, p = pearsonr(corr_data["Y染色体浓度"], corr_data[v])
         stars = "***" if p < 0.001 else ("**" if p < 0.01 else ("*" if p < 0.05 else "ns"))
-        print(f"  {v:20s}: r={r:+.4f}, p={p:.4f} {stars}")
+        tee_print(f"  {v:20s}: r={r:+.4f}, p={p:.4f} {stars}")
         if v == "GC含量":
-            print(f"    (note: ***/**/* = significance level, not an error)")
+            tee_print(f"    （注：***/**/* 表示显著性水平，非错误）")
 
-# Partial correlations
-print("\nPartial correlations (controlling age+IVF):")
+# 偏相关分析
+tee_print("\n偏相关分析（控制 年龄+IVF）:")
 control = pd.DataFrame({
     "age": df["年龄"].values,
     "ivf1": (df["IVF妊娠"] == "IVF（试管婴儿）").astype(float).values,
@@ -167,9 +180,9 @@ for target in ["孕周数值", "孕妇BMI"]:
     resid_target = sm.OLS(y_target, Xc).fit().resid
     resid_y = sm.OLS(y_y, Xc).fit().resid
     r_partial, p_partial = pearsonr(resid_target, resid_y)
-    print(f"  Y ~ {target}: r_partial={r_partial:+.4f}, p={p_partial:.4f}")
+    tee_print(f"  Y ~ {target}: r_partial={r_partial:+.4f}, p={p_partial:.4f}")
 
-# Scatter + LOESS
+# 散点图 + LOESS 平滑
 fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
 for ax, (xc, yc, title) in zip(axes, [
     ("孕周数值", "Y染色体浓度", "Y染色体浓度 vs 孕周数值"),
@@ -193,10 +206,10 @@ for ax, (xc, yc, title) in zip(axes, [
 save_fig("scatter_relationships.png")
 
 # ================================================================
-# Phase 3: Individual Trajectories
+# 阶段3：个体轨迹
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 3: Individual Trajectories")
+tee_print("\n" + "=" * 60)
+tee_print("阶段3：个体轨迹")
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 subjects = df["孕妇代码"].unique()
@@ -225,10 +238,10 @@ axes[1].set_xlabel("孕周（周）"); axes[1].legend()
 save_fig("spaghetti_plots.png")
 
 # ================================================================
-# Phase 4: LMM
+# 阶段4：线性混合模型（LMM）
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 4: Linear Mixed Models")
+tee_print("\n" + "=" * 60)
+tee_print("阶段4：线性混合模型")
 
 df_m = df[["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄", "IVF妊娠", "孕妇代码"]].dropna().copy()
 df_m["IVF_试管"] = (df_m["IVF妊娠"] == "IVF（试管婴儿）").astype(int)
@@ -238,45 +251,45 @@ for c in ["孕周数值", "孕妇BMI", "年龄"]:
 
 models, results = {}, {}
 
-print("\n  M0: Null model (ICC)")
+tee_print("\n  M0：空模型（ICC）")
 r0 = smf.mixedlm("Y染色体浓度 ~ 1", df_m, groups=df_m["孕妇代码"]).fit(reml=True)
 models["M0"] = "Null"; results["M0"] = r0
 vr = r0.cov_re.values[0, 0] if hasattr(r0.cov_re, 'values') else r0.cov_re.iloc[0, 0]
 icc = vr / (vr + r0.scale)
-print(f"    ICC = {icc:.4f}")
+tee_print(f"    ICC = {icc:.4f}")
 
-print("\n  M1: + Week + BMI")
+tee_print("\n  M1：+ 孕周 + BMI")
 r1 = smf.mixedlm("Y染色体浓度 ~ 孕周数值_z + 孕妇BMI_z", df_m, groups=df_m["孕妇代码"]).fit(reml=True)
 models["M1"] = "+Week+BMI"; results["M1"] = r1
-print(r1.summary().tables[1])
+tee_print(r1.summary().tables[1])
 
-print("\n  M2: + Age + IVF")
+tee_print("\n  M2：+ 年龄 + IVF")
 r2 = smf.mixedlm("Y染色体浓度 ~ 孕周数值_z + 孕妇BMI_z + 年龄_z + IVF_试管 + IVF_人授",
                   df_m, groups=df_m["孕妇代码"]).fit(reml=True)
 models["M2"] = "+Age+IVF"; results["M2"] = r2
-print(r2.summary().tables[1])
+tee_print(r2.summary().tables[1])
 
-print("\n  M3: + Week x BMI")
+tee_print("\n  M3：+ 孕周 × BMI 交互项")
 try:
     r3 = smf.mixedlm("Y染色体浓度 ~ 孕周数值_z * 孕妇BMI_z + 年龄_z + IVF_试管 + IVF_人授",
                       df_m, groups=df_m["孕妇代码"]).fit(reml=True)
     models["M3"] = "+Interaction"; results["M3"] = r3
-    print(r3.summary().tables[1])
+    tee_print(r3.summary().tables[1])
 except Exception as e:
-    print(f"    M3 not converged: {e}")
+    tee_print(f"    M3 未收敛: {e}")
 
-print(f"\nModel Comparison:")
-print(f"  {'Model':<8s} {'AIC':>10s} {'BIC':>10s} {'-2LL':>10s}")
+tee_print(f"\n模型比较:")
+tee_print(f"  {'Model':<8s} {'AIC':>10s} {'BIC':>10s} {'-2LL':>10s}")
 for n, r in results.items():
-    print(f"  {n:<8s} {r.aic:>10.1f} {r.bic:>10.1f} {-2*r.llf:>10.1f}")
+    tee_print(f"  {n:<8s} {r.aic:>10.1f} {r.bic:>10.1f} {-2*r.llf:>10.1f}")
 
 for a, b, dfd in [("M0", "M1", 2), ("M1", "M2", 3)]:
     if results.get(a) and results.get(b):
         lrt = -2 * (results[a].llf - results[b].llf)
         p = stats.chi2.sf(lrt, df=dfd)
-        print(f"  LRT {a} vs {b}: chi2={lrt:.2f}, df={dfd}, p={p:.4f}")
+        tee_print(f"  LRT {a} vs {b}: χ²={lrt:.2f}, df={dfd}, p={p:.4f}")
 
-print(f"\nR-squared (Nakagawa approx):")
+tee_print(f"\nR²（Nakagawa 近似）:")
 for n in ["M1", "M2"]:
     if n in results:
         r = results[n]
@@ -285,9 +298,9 @@ for n in ["M1", "M2"]:
         ve = r.scale
         mr2 = vf / (vf + vr2 + ve)
         cr2 = (vf + vr2) / (vf + vr2 + ve)
-        print(f"  {n}: Marginal R2={mr2:.4f}, Conditional R2={cr2:.4f}")
+        tee_print(f"  {n}: Marginal R2={mr2:.4f}, Conditional R2={cr2:.4f}")
 
-# Forest plot
+# 森林图
 best = results.get("M2") or results.get("M1")
 if best is not None:
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -308,7 +321,7 @@ if best is not None:
     ax.set_title("LMM 固定效应（模型 M2）", fontsize=14)
 save_fig("model_forest_plot.png")
 
-# Residual diagnostics
+# 残差诊断
 fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 fitted = best.fittedvalues; resid = best.resid
 axes[0].scatter(fitted, resid, alpha=0.5, s=20, color="#4C72B0")
@@ -324,7 +337,7 @@ axes[2].plot(xr, stats.norm.pdf(xr, resid.mean(), resid.std()), color="red", lw=
 axes[2].set_title("残差分布")
 save_fig("model_residuals_fitted.png")
 
-# Random effects QQ
+# 随机效应 Q-Q 图
 fig, ax = plt.subplots(figsize=(7, 6))
 re_vals = np.array(list(best.random_effects.values()))
 sm.qqplot(re_vals, stats.norm, fit=True, line="45", ax=ax,
@@ -333,20 +346,20 @@ ax.set_title("随机截距 Q-Q 图", fontsize=14)
 save_fig("model_qq_random_effects.png")
 
 # ================================================================
-# Phase 5: Healthy vs Unhealthy
+# 阶段5：健康 vs 不健康 对比
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 5: Healthy vs Unhealthy")
+tee_print("\n" + "=" * 60)
+tee_print("阶段5：健康 vs 不健康 对比")
 
 df_h = df[df["胎儿是否健康"] == "是"]
 df_u = df[df["胎儿是否健康"] == "否"]
 
 for lb, d in [("健康", df_h), ("不健康", df_u)]:
     s = d["Y染色体浓度"].dropna()
-    print(f"  {lb} (n={len(s)}): mean={s.mean():.6f}, std={s.std():.6f}, med={s.median():.6f}")
+    tee_print(f"  {lb}（n={len(s)}）：均值={s.mean():.6f}, 标准差={s.std():.6f}, 中位数={s.median():.6f}")
 
 u_stat, u_p = mannwhitneyu(df_h["Y染色体浓度"].dropna(), df_u["Y染色体浓度"].dropna())
-print(f"  Mann-Whitney U = {u_stat:.1f}, p = {u_p:.4f}")
+tee_print(f"  Mann-Whitney U = {u_stat:.1f}, p = {u_p:.4f}")
 
 fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
 sns.violinplot(data=df, x="胎儿是否健康", y="Y染色体浓度",
@@ -359,10 +372,10 @@ axes[1].legend(title="是否健康")
 save_fig("coef_comparison_health.png")
 
 # ================================================================
-# Phase 6: Supplementary
+# 阶段6：补充分析
 # ================================================================
-print("\n" + "=" * 60)
-print("Phase 6: Nonlinearity Check")
+tee_print("\n" + "=" * 60)
+tee_print("阶段6：非线性检验")
 
 d_q = df[["Y染色体浓度", "孕周数值", "孕妇代码"]].dropna()
 d_q["孕周2"] = d_q["孕周数值"] ** 2
@@ -370,7 +383,7 @@ m_lin = smf.mixedlm("Y染色体浓度 ~ 孕周数值", d_q, groups=d_q["孕妇�
 m_quad = smf.mixedlm("Y染色体浓度 ~ 孕周数值 + 孕周2", d_q, groups=d_q["孕妇代码"]).fit(reml=True)
 lrt_q = -2 * (m_lin.llf - m_quad.llf)
 p_q = stats.chi2.sf(lrt_q, 1)
-print(f"  Quadratic term LRT: chi2={lrt_q:.2f}, p={p_q:.4f}")
+tee_print(f"二次项 LRT: χ²={lrt_q:.2f}, p={p_q:.4f}")
 
 fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
 xs = np.linspace(d_q["孕周数值"].min(), d_q["孕周数值"].max(), 200)
@@ -388,7 +401,10 @@ axes[1].set_xlabel("抽血次数"); axes[1].set_ylabel("Y染色体浓度")
 save_fig("scatter_nonlinear_and_bloodtime.png")
 
 # ================================================================
-print("\n" + "=" * 60)
-print("ALL DONE!")
+tee_print("\n" + "=" * 60)
+tee_print("全部完成！")
 for c in sorted(os.listdir(RESULT_DIR)):
-    print(f"  result/{c}")
+    tee_print(f"  result/{c}")
+
+_log_file.write("```\n")
+_log_file.close()

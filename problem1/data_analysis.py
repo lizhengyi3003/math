@@ -271,16 +271,16 @@ for target in ["孕周数值", "孕妇BMI"]:
 # 散点图 + LOESS 平滑
 fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
 for ax, (xc, yc, title) in zip(axes, [
-    ("孕周数值", "Y染色体浓度", "Y染色体浓度 vs 孕周数值"),
-    ("孕妇BMI", "Y染色体浓度", "Y染色体浓度 vs BMI"),
-    ("孕周数值", "孕妇BMI", "孕周数值 vs BMI"),
+    ("孕周数值", "Y染色体浓度", "Y染色体浓度与孕周数值"),
+    ("孕妇BMI", "Y染色体浓度", "Y染色体浓度与BMI"),
+    ("孕周数值", "孕妇BMI", "孕周数值与BMI"),
 ]):
     d = df[[xc, yc]].dropna()
     x, y = d[xc].values, d[yc].values
     ax.scatter(x, y, alpha=0.4, s=25, color="#4C72B0")
     try:
         s = lowess(y, x, frac=0.3, return_sorted=True)
-        ax.plot(s[:, 0], s[:, 1], color="red", lw=2.5, label="LOESS趋势")
+        ax.plot(s[:, 0], s[:, 1], color="red", lw=2.5, label="LOESS 平滑趋势")
     except:
         pass
     r, p = pearsonr(x, y)
@@ -306,7 +306,7 @@ for subj in sample:
     d = df[df["孕妇代码"] == subj].sort_values("孕周数值")
     axes[0].plot(d["孕周数值"], d["Y染色体浓度"], alpha=0.3, lw=0.8, color="gray")
 sm_lo = lowess(df["Y染色体浓度"], df["孕周数值"], frac=0.3, return_sorted=True)
-axes[0].plot(sm_lo[:, 0], sm_lo[:, 1], color="red", lw=3, label="LOESS趋势")
+axes[0].plot(sm_lo[:, 0], sm_lo[:, 1], color="red", lw=3, label="LOESS 平滑趋势")
 axes[0].set_title("个体轨迹（Y染色体浓度 随孕周变化）", fontsize=13)
 axes[0].set_xlabel("孕周（周）"); axes[0].set_ylabel("Y染色体浓度")
 axes[0].legend()
@@ -528,6 +528,7 @@ re_vals = np.array(list(final_best.random_effects.values()))
 sm.qqplot(re_vals, stats.norm, fit=True, line="45", ax=ax,
           markerfacecolor="#55A868", markersize=6)
 ax.set_title("随机截距 Q-Q 图", fontsize=14)
+ax.set_xlabel("理论分位数"); ax.set_ylabel("样本分位数")
 save_fig("model_qq_random_effects.png")
 
 # ================================================================
@@ -549,7 +550,7 @@ tee_print(f"  Mann-Whitney U = {u_stat:.1f}, p = {u_p:.4f}")
 fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
 sns.violinplot(data=df, x="胎儿是否健康", y="Y染色体浓度",
                palette={"是": "#55A868", "否": "#C44E52"}, inner="quartile", ax=axes[0])
-axes[0].set_title(f"Y染色体浓度 按健康状态分组\nMann-Whitney p={u_p:.4f}", fontsize=13)
+axes[0].set_title(f"Y染色体浓度 按健康状态分组\nMann-Whitney U 检验 p={u_p:.4f}", fontsize=13)
 sns.boxplot(data=df, x="IVF妊娠", y="Y染色体浓度", hue="胎儿是否健康",
             palette={"是": "#55A868", "否": "#C44E52"}, ax=axes[1])
 axes[1].set_title("Y染色体浓度 按 IVF×健康 分组", fontsize=13)

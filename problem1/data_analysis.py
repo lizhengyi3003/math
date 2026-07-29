@@ -19,8 +19,9 @@ warnings.filterwarnings("ignore")
 # ================================================================
 # 输出目录与日志文件
 # ================================================================
-INPUT_FILE = r"../data_modeling.xlsx"
-RESULT_DIR = r"result"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+INPUT_FILE = os.path.join(_SCRIPT_DIR, "..", "data_modeling.xlsx")
+RESULT_DIR = os.path.join(_SCRIPT_DIR, "result")
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 _OUTPUT_MD = os.path.join(RESULT_DIR, "analysis_output.md")

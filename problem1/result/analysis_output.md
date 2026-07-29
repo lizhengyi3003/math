@@ -124,7 +124,6 @@ Wald 联合检验（所有固定效应是否联合为 0）:
 
 ============================================================
 全部完成！
-  result/age_abnormality_rate.png
   result/analysis_output.md
   result/boxplot_by_group.png
   result/coef_comparison_health.png
@@ -135,7 +134,6 @@ Wald 联合检验（所有固定效应是否联合为 0）:
   result/model_forest_plot.png
   result/model_qq_random_effects.png
   result/model_residuals_diagnostics.png
-  result/model_residuals_fitted.png
   result/scatter_nonlinear_and_bloodtime.png
   result/scatter_relationships.png
   result/spaghetti_plots.png

@@ -22,8 +22,9 @@ warnings.filterwarnings("ignore")
 # ================================================================
 # 路径与字体
 # ================================================================
-INPUT_FILE = r"../data_modeling_p2.xlsx"
-RESULT_DIR = r"result"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+INPUT_FILE = os.path.join(_SCRIPT_DIR, "..", "data_modeling_p2.xlsx")
+RESULT_DIR = os.path.join(_SCRIPT_DIR, "result")
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 sns.set_style("whitegrid")

@@ -19,9 +19,12 @@ Font: QQXHN
   孕周数值: 均值=16.4973, 标准差=3.9501, 最小值=11.0000, 最大值=29.0000, 偏度=0.77
   孕妇BMI: 均值=32.2656, 标准差=2.8433, 最小值=26.6200, 最大值=46.8800, 偏度=1.03
   年龄: 均值=29.1008, 标准差=3.6915, 最小值=21.0000, 最大值=43.0000, 偏度=0.61
+  身高: 均值=161.0446, 标准差=5.3035, 最小值=144.0000, 最大值=175.0000, 偏度=-0.05
   OK hist_distributions.png
   OK boxplot_by_group.png
   OK gc_quality_control.png
+  OK age_abnormality_rate.png
+  OK male_vs_female_comparison.png
   OK hist_height.png
 
 ============================================================
@@ -47,7 +50,7 @@ Y染色体浓度 与其他变量的相关性:
   OK spaghetti_plots.png
 
 ============================================================
-阶段4：线性混合模型（升级版）
+阶段4：线性混合模型
   建模样本: 605 行, 251 人
   新增特征: 身高_z, 孕周数值_z², 孕妇BMI_z²
 
@@ -124,6 +127,7 @@ Wald 联合检验（所有固定效应是否联合为 0）:
 
 ============================================================
 全部完成！
+  result/age_abnormality_rate.png
   result/analysis_output.md
   result/boxplot_by_group.png
   result/coef_comparison_health.png
@@ -131,6 +135,7 @@ Wald 联合检验（所有固定效应是否联合为 0）:
   result/gc_quality_control.png
   result/hist_distributions.png
   result/hist_height.png
+  result/male_vs_female_comparison.png
   result/model_forest_plot.png
   result/model_qq_random_effects.png
   result/model_residuals_diagnostics.png

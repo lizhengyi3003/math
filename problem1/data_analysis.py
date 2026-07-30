@@ -31,7 +31,16 @@ _log_file.write("# data_analysis.py 完整终端输出\n\n```\n")
 def tee_print(*args, **kwargs):
     """同时输出到终端和 md 日志文件"""
     import builtins
-    builtins.print(*args, **kwargs)
+    try:
+        builtins.print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Windows GBK 终端无法编码部分 Unicode，回退为 ASCII-safe 输出
+        safe_args = []
+        for a in args:
+            if isinstance(a, str):
+                a = a.encode("gbk", errors="replace").decode("gbk")
+            safe_args.append(a)
+        builtins.print(*safe_args, **kwargs)
     builtins.print(*args, file=_log_file, **kwargs)
 
 # ── 步骤1：seaborn 样式（不触碰字体）──
@@ -97,7 +106,7 @@ tee_print(f"  合并后: {len(df_all)} 行 (男={n_rows}, 女={n_female})")
 tee_print("\n" + "=" * 60)
 tee_print("阶段1：探索性数据分析")
 
-for col in ["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄"]:
+for col in ["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄", "身高"]:
     s = df[col].dropna()
     tee_print(f"  {col}: 均值={s.mean():.4f}, 标准差={s.std():.4f}, "
           f"最小值={s.min():.4f}, 最大值={s.max():.4f}, 偏度={s.skew():.2f}")
@@ -134,7 +143,7 @@ sns.boxplot(data=df, x="胎儿是否健康", y="Y染色体浓度", palette="Set2
 axes[1].set_title("Y染色体浓度 按 胎儿是否健康 分组", fontsize=13)
 save_fig("boxplot_by_group.png")
 
-# ── 新图1：GC含量质量控制直方图 ──
+# ── GC含量质量控制直方图 ──
 fig, ax = plt.subplots(figsize=(8, 5))
 gc_vals = df["GC含量"].dropna()
 ax.hist(gc_vals, bins=40, color="#4C72B0", edgecolor="white", alpha=0.85)
@@ -152,7 +161,7 @@ xhi = min(0.605, p99_gc + 0.005)
 ax.set_xlim(xlo, xhi)
 save_fig("gc_quality_control.png")
 
-# ── 新图2：年龄-胎儿异常率柱状图（仅男胎）──
+# ── 年龄-胎儿异常率柱状图（仅男胎）──
 fig, ax = plt.subplots(figsize=(10, 5.5))
 age_bins = [0, 25, 30, 35, 100]
 age_labels = ["<25", "25-30", "30-35", ">35"]
@@ -180,6 +189,22 @@ ax.set_ylim(0, max(max(rates) * 1.6, 8))
 ax.text(0.02, 0.96, f"男胎共 605 例，异常 22 例\n（注：女胎 358 例全部健康，未展示）",
         transform=ax.transAxes, ha="left", va="top", fontsize=9, color="gray",
         bbox=dict(boxstyle="round", facecolor="white", alpha=0.85))
+save_fig("age_abnormality_rate.png")
+
+# ── 男女胎特征对比箱线图 ──
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+# 使用男女胎共有的列（女胎无 Y染色体浓度）
+feat_pairs = [("孕妇BMI", "孕妇BMI 男女胎对比"), ("孕周数值", "孕周数值 男女胎对比")]
+for ax, (col, title) in zip(axes, feat_pairs):
+    d_plot = df_all[[col, "性别"]].dropna()
+    if d_plot["性别"].nunique() >= 2 and d_plot[col].notna().sum() > 0:
+        sns.boxplot(data=d_plot, x="性别", y=col, palette={"男": "#4C72B0", "女": "#C44E52"}, ax=ax)
+        ax.set_title(title, fontsize=13)
+        ax.set_xlabel("")
+    else:
+        ax.text(0.5, 0.5, "数据不足", ha="center", va="center", transform=ax.transAxes, fontsize=14)
+        ax.set_title(title, fontsize=13)
+save_fig("male_vs_female_comparison.png")
 
 # ── 身高分布直方图 ──
 fig, ax = plt.subplots(figsize=(8, 5))
@@ -325,10 +350,10 @@ axes[1].set_xlabel("孕周（周）"); axes[1].legend()
 save_fig("spaghetti_plots.png")
 
 # ================================================================
-# 阶段4：线性混合模型（LMM）—— 升级版：特征工程 + 嵌套模型选择
+# 阶段4：线性混合模型（LMM）—— 特征工程 + 嵌套模型选择
 # ================================================================
 tee_print("\n" + "=" * 60)
-tee_print("阶段4：线性混合模型（升级版）")
+tee_print("阶段4：线性混合模型")
 
 # ── 特征工程：引入身高和孕周二次项 ──
 df_m = df[["Y染色体浓度", "孕周数值", "孕妇BMI", "年龄", "身高", "IVF妊娠", "孕妇代码"]].dropna().copy()
@@ -478,7 +503,7 @@ ax.set_xlabel("系数估计值（95% 置信区间）", fontsize=12)
 ax.set_title(f"LMM 固定效应（最终模型 {best_name}）", fontsize=15)
 save_fig("model_forest_plot.png")
 
-# ── 残差诊断（升级版 2×2 四图）──
+# ── 残差诊断 ──
 tee_print(f"\n残差诊断:")
 
 fig, axes = plt.subplots(2, 2, figsize=(14, 12))
